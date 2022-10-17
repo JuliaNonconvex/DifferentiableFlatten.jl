@@ -289,9 +289,6 @@ flatten_expr(T, C) = quote
 end
 
 _cumsum(x) = cumsum(x)
-if VERSION < v"1.5"
-    _cumsum(x::Tuple) = (_cumsum(collect(x))..., )
-end
 
 # Zygote can return a sparse vector co-tangent
 # even if the input is a vector. This is causing
