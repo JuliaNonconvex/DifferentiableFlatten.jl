@@ -110,4 +110,7 @@ MyStruct(a, b) = MyStruct{typeof(a), typeof(a), typeof(b)}(a, b)
 
     x = JuMP.Containers.DenseAxisArray(reshape(Float64[1.0, 1.0], (2,)), 1)
     @test zygote_flatten(x, (data = [1.0, 1.0],))[1] == [1.0, 1.0]
+
+    @test flatten(exp)[1] == Union{}[]
+    @test flatten(exp)[2]([]) === exp
 end

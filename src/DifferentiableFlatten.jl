@@ -107,8 +107,12 @@ function ChainRulesCore.rrule(::typeof(_build_ordered_dict), vals, keys)
 end
 
 function flatten(x)
-    v, un = flatten(ntfromstruct(x))
-    return identity.(v), Unflatten(x, y -> structfromnt(typeof(x), un(y)))
+    if Base.issingletontype(typeof(x))
+        v, un = Union{}[], _ -> x
+    else
+        v, un = flatten(ntfromstruct(x))
+        return identity.(v), Unflatten(x, y -> structfromnt(typeof(x), un(y)))
+    end
 end
 
 function zygote_flatten(::Real, x::Real)
