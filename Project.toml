@@ -18,6 +18,12 @@ OrderedCollections = "1"
 Requires = "1"
 julia = "1"
 
+[weakdeps]
+JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
+
+[extensions]
+DifferentiableFlattenJuMPExt = "JuMP"
+
 [extras]
 JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
