@@ -316,27 +316,14 @@ function zygote_flatten(x1::SparseMatrixCSC, x2::SparseMatrixCSC)
     return identity.(x_vec), Unflatten(x1, Array_from_vec)
 end
 
-@init @require JuMP="4076af6c-e467-56ae-b986-b466b2749572" begin
-    import .JuMP
-    @eval begin
-        function flatten(x::JuMP.Containers.DenseAxisArray)
-            x_vec, from_vec = flatten(vec(identity.(x.data)))
-            Array_from_vec(x_vec) = JuMP.Containers.DenseAxisArray(reshape(from_vec(x_vec), size(x)), axes(x)...)
-            return identity.(x_vec), Array_from_vec
-        end
-
-        function zygote_flatten(x1::JuMP.Containers.DenseAxisArray, x2::NamedTuple)
-            x_vec, from_vec = zygote_flatten(vec(identity.(x1.data)), vec(identity.(x2.data)))
-            Array_from_vec(x_vec) = JuMP.Containers.DenseAxisArray(reshape(from_vec(x_vec), size(x2)), axes(x2)...)
-            return identity.(x_vec), Array_from_vec
-        end
-
-        function zygote_flatten(x1::JuMP.Containers.DenseAxisArray, x2::JuMP.Containers.DenseAxisArray)
-            x_vec, from_vec = zygote_flatten(vec(identity.(x1.data)), vec(identity.(x2.data)))
-            Array_from_vec(x_vec) = JuMP.Containers.DenseAxisArray(reshape(from_vec(x_vec), size(x2)), axes(x2)...)
-            return identity.(x_vec), Array_from_vec
-        end
-    end
+if !isdefined(Base, :get_extension)
+    using Requires
 end
 
+function __init__()
+    @static if !isdefined(Base, :get_extension)
+        @require JuMP="4076af6c-e467-56ae-b986-b466b2749572" begin
+            include("../ext/DifferentiableFlattenJuMPExt.jl")
+        end
+    end
 end
