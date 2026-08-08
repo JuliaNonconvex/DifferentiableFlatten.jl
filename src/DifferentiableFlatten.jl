@@ -194,6 +194,10 @@ function zygote_flatten(d1::AbstractDict, d2::AbstractDict, ks = collect(keys(d2
     return identity.(d_vec), Unflatten(d1, unflatten_to_Dict)
 end
 
+# Zygote 0.7 can return InplaceableThunk/Thunk co-tangents from getindex.
+# Unthunk them before processing so the rest of the dispatch works.
+zygote_flatten(x1, x2::AbstractThunk) = zygote_flatten(x1, unthunk(x2))
+
 function zygote_flatten(x1, x2)
     v, un = zygote_flatten(ntfromstruct(x1), ntfromstruct(x2))
     return identity.(v), Unflatten(x1, y -> structfromnt(typeof(x2), un(y)))
