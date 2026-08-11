@@ -16,7 +16,7 @@ ChainRulesCore = "1"
 NamedTupleTools = "0.14"
 OrderedCollections = "1"
 Requires = "1"
-julia = "1"
+julia = "1.10"
 
 [extras]
 JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
