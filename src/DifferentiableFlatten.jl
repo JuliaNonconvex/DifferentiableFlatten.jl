@@ -52,12 +52,13 @@ flatten(x::Vector{<:Real}) = (identity.(x), identity)
 function flatten(x::AbstractVector)
     x_vecs_and_backs = map(val -> flatten(val), identity.(x))
     x_vecs, backs = first.(x_vecs_and_backs), last.(x_vecs_and_backs)
+    lengths = map(_length, x_vecs)
+    sz = _cumsum(lengths)
     function Vector_from_vec(x_vec)
-        sz = _cumsum(map(_length, x_vecs))
-        x_Vec = [backs[n](x_vec[sz[n]-_length(x_vecs[n])+1:sz[n]]) for n in eachindex(x)]
+        x_Vec = [backs[n](x_vec[sz[n]-lengths[n]+1:sz[n]]) for n in eachindex(x)]
         return x_Vec
     end
-    return reduce(vcat, x_vecs), Vector_from_vec
+    return isempty(x_vecs) ? (Float64[], _ -> empty(x)) : (reduce(vcat, x_vecs), Vector_from_vec)
 end
 
 function flatten(x::AbstractArray)
@@ -137,12 +138,13 @@ function zygote_flatten(x1::AbstractVector, x2::AbstractVector)
         zygote_flatten(val[1], val[2])
     end
     x_vecs, backs = first.(x_vecs_and_backs), last.(x_vecs_and_backs)
+    lengths = map(_length, x_vecs)
+    sz = _cumsum(lengths)
     function Vector_from_vec(x_vec)
-        sz = _cumsum(map(_length, x_vecs))
-        x_Vec = [backs[n](x_vec[sz[n]-_length(x_vecs[n])+1:sz[n]]) for n in eachindex(x2)]
+        x_Vec = [backs[n](x_vec[sz[n]-lengths[n]+1:sz[n]]) for n in eachindex(x2)]
         return x_Vec
     end
-    return reduce(vcat, x_vecs), Vector_from_vec
+    return isempty(x_vecs) ? (Float64[], _ -> empty(x2)) : (reduce(vcat, x_vecs), Vector_from_vec)
 end
 
 function zygote_flatten(x1::AbstractArray, x2::AbstractArray)
@@ -209,7 +211,7 @@ _length(::Nothing) = 0
 function ChainRulesCore.rrule(::typeof(flatten), x)
     d_vec, un = flatten(x)
     return (d_vec, un), Δ -> begin
-        (NoTangent(), un(Δ[1]), NoTangent())
+        (NoTangent(), un(Δ[1]))
     end
 end
 function ChainRulesCore.rrule(::typeof(flatten), d::AbstractDict, ks)
@@ -265,15 +267,15 @@ end
 
 function zygote_flatten(x, ::Nothing)
     t = flatten(x)
-    return zero(t[1]), Base.tail(t)
+    return zero(t[1]), t[2]
 end
 function zygote_flatten(x, ::NoTangent)
     t = flatten(x)
-    return zero(t[1]), Base.tail(t)
+    return zero(t[1]), t[2]
 end
 function zygote_flatten(x, ::ZeroTangent)
     t = flatten(x)
-    return zero(t[1]), Base.tail(t)
+    return zero(t[1]), t[2]
 end
 function zygote_flatten(::Any, ::Tuple{})
     return Float64[], _ -> ()
