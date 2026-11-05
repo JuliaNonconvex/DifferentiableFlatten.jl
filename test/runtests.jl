@@ -116,3 +116,25 @@ MyStruct(a, b) = MyStruct{typeof(a),typeof(a),typeof(b)}(a, b)
     @test flatten(exp)[1] == Union{}[]
     @test flatten(exp)[2]([]) === exp
 end
+
+@testset "Regression tests" begin
+    # flatten of an empty non-Real vector used to throw ArgumentError from
+    # reducing an empty collection.
+    v, un = flatten(Any[])
+    @test v == Float64[]
+    @test un(Float64[]) == Any[]
+
+    # zygote_flatten with nothing/zero cotangents used to return the unflatten
+    # function wrapped in a 1-tuple. The returned vector is the zero cotangent,
+    # so unflattening it must give zeros.
+    @test zygote_flatten(1.0, nothing)[2]([0.0]) === 0.0
+    @test zygote_flatten((1.0, 2.0), nothing)[2]([0.0, 0.0]) == (0.0, 0.0)
+    @test zygote_flatten(1.0, nothing)[2] isa Function
+
+    # rrule(flatten, x) used to return 3 cotangents for the 2-argument primal.
+    x = (1.0, 2.0)
+    y, pb = ChainRulesCore.rrule(flatten, x)
+    cotans = pb(([1.0, 1.0], nothing))
+    @test length(cotans) == 2
+    @test cotans[2] == (1.0, 1.0)
+end
