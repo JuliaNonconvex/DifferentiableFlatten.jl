@@ -184,7 +184,7 @@ function zygote_flatten(x1::NamedTuple, x2::NamedTuple)
     return identity.(x_vec), unflatten_to_NamedTuple
 end
 
-function zygote_flatten(d1::AbstractDict, d2::AbstractDict, ks = collect(keys(d2)))
+function zygote_flatten(d1::AbstractDict, d2::AbstractDict, ks = collect(keys(d1)))
     _d1 = OrderedDict(k => d1[k] for k in ks)
     _d2 = OrderedDict(k => d2[k] for k in ks)
     d_vec, unflatten =
