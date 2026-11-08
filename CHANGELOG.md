@@ -5,6 +5,14 @@ The format follows the recommendation from JuliaRegistrator:
 a brief summary, then categorized lists of breaking changes,
 new features, bug fixes, and maintenance items.
 
+## v0.2.1 (2026-11-08)
+
+### Bug fixes
+- The pullback of `Unflatten` for dictionaries now returns the flat cotangent
+  in the forward key order. It previously used the key order of the merged
+  cotangent dictionary, which is sorted, so reverse-mode gradients through
+  dictionaries with unsorted insertion order were permuted. ([#11](https://github.com/JuliaNonconvex/DifferentiableFlatten.jl/pull/11))
+
 ## v0.2.0 (2026-08-11)
 
 ### Breaking changes
