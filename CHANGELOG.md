@@ -5,7 +5,7 @@ The format follows the recommendation from JuliaRegistrator:
 a brief summary, then categorized lists of breaking changes,
 new features, bug fixes, and maintenance items.
 
-## v0.2.1 (2026-11-08)
+## v0.2.2 (2026-11-08)
 
 ### Bug fixes
 - The pullback of `Unflatten` for dictionaries now returns the flat cotangent
