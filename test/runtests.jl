@@ -1,5 +1,5 @@
 using DifferentiableFlatten: flatten, zygote_flatten, maybeflatten
-using DifferentiableFlatten: DifferentiableFlatten, @constructor
+using DifferentiableFlatten: DifferentiableFlatten, @constructor, Unflatten
 using OrderedCollections, JuMP, Zygote, SparseArrays, LinearAlgebra, Test
 using ChainRulesCore
 
@@ -137,4 +137,16 @@ end
     cotans = pb(([1.0, 1.0], nothing))
     @test length(cotans) == 2
     @test cotans[2] == (1.0, 1.0)
+
+    # The pullback of Unflatten for dictionaries with unsorted insertion
+    # order used to return the flat cotangent in sorted key order, permuting
+    # the gradient entries.
+    d = OrderedDict(:z => 1.0, :a => 2.0, :m => 3.0)
+    xvec, _un = flatten((d,))
+    unx = Unflatten((d,), _un)
+    g = Zygote.gradient(xvec) do v
+        u = unx(v)[1]
+        maybeflatten(u[:z] + 2u[:a] + 3u[:m])
+    end[1]
+    @test g == [1.0, 2.0, 3.0]
 end
