@@ -55,10 +55,14 @@ function flatten(x::AbstractVector)
     lengths = map(_length, x_vecs)
     sz = _cumsum(lengths)
     function Vector_from_vec(x_vec)
-        x_Vec = [backs[n](x_vec[sz[n]-lengths[n]+1:sz[n]]) for n in eachindex(x)]
+        x_Vec = [backs[n](x_vec[(sz[n] - lengths[n] + 1):sz[n]]) for n in eachindex(x)]
         return x_Vec
     end
-    return isempty(x_vecs) ? (Float64[], _ -> empty(x)) : (reduce(vcat, x_vecs), Vector_from_vec)
+    return if isempty(x_vecs)
+        (Float64[], _ -> empty(x))
+    else
+        (reduce(vcat, x_vecs), Vector_from_vec)
+    end
 end
 
 function flatten(x::AbstractArray)
@@ -74,7 +78,7 @@ function flatten(x::Tuple)
     sz = _cumsum(lengths)
     function unflatten_to_Tuple(v)
         map(x_backs, lengths, sz) do x_back, l, s
-            return x_back(v[s-l+1:s])
+            return x_back(v[(s - l + 1):s])
         end
     end
     return reduce(vcat, x_vecs), unflatten_to_Tuple
@@ -89,7 +93,7 @@ function flatten(x::NamedTuple)
     return identity.(x_vec), unflatten_to_NamedTuple
 end
 
-function flatten(d::AbstractDict, ks = collect(keys(d)))
+function flatten(d::AbstractDict, ks=collect(keys(d)))
     _d = OrderedDict(k => d[k] for k in ks)
     d_vec, unflatten = flatten(identity.(collect(values(_d))))
     function unflatten_to_Dict(v)
@@ -99,10 +103,10 @@ function flatten(d::AbstractDict, ks = collect(keys(d)))
     return identity.(d_vec), unflatten_to_Dict
 end
 function _build_ordered_dict(vals, keys)
-    OrderedDict(key => vals[n] for (n, key) in enumerate(keys))
+    return OrderedDict(key => vals[n] for (n, key) in enumerate(keys))
 end
 function ChainRulesCore.rrule(::typeof(_build_ordered_dict), vals, keys)
-    _build_ordered_dict(vals, keys), Δ -> begin
+    return _build_ordered_dict(vals, keys), Δ -> begin
         NoTangent(), values(Δ), NoTangent()
     end
 end
@@ -135,16 +139,20 @@ zygote_flatten(::Vector{<:Real}, x::Vector{<:Real}) = (identity.(x), identity)
 
 function zygote_flatten(x1::AbstractVector, x2::AbstractVector)
     x_vecs_and_backs = map(tuple.(identity.(x1), identity.(x2))) do val
-        zygote_flatten(val[1], val[2])
+        return zygote_flatten(val[1], val[2])
     end
     x_vecs, backs = first.(x_vecs_and_backs), last.(x_vecs_and_backs)
     lengths = map(_length, x_vecs)
     sz = _cumsum(lengths)
     function Vector_from_vec(x_vec)
-        x_Vec = [backs[n](x_vec[sz[n]-lengths[n]+1:sz[n]]) for n in eachindex(x2)]
+        x_Vec = [backs[n](x_vec[(sz[n] - lengths[n] + 1):sz[n]]) for n in eachindex(x2)]
         return x_Vec
     end
-    return isempty(x_vecs) ? (Float64[], _ -> empty(x2)) : (reduce(vcat, x_vecs), Vector_from_vec)
+    return if isempty(x_vecs)
+        (Float64[], _ -> empty(x2))
+    else
+        (reduce(vcat, x_vecs), Vector_from_vec)
+    end
 end
 
 function zygote_flatten(x1::AbstractArray, x2::AbstractArray)
@@ -155,24 +163,24 @@ end
 
 function zygote_flatten(x1::Tuple, x2::Tuple)
     x_vecs_and_backs = map(tuple.(x1, x2)) do val
-        zygote_flatten(val[1], val[2])
+        return zygote_flatten(val[1], val[2])
     end
     x_vecs, x_backs = first.(x_vecs_and_backs), last.(x_vecs_and_backs)
     lengths = map(_length, x_vecs)
     sz = _cumsum(lengths)
     function unflatten_to_Tuple(v)
         map(x_backs, lengths, sz) do x_back, l, s
-            return x_back(v[s-l+1:s])
+            return x_back(v[(s - l + 1):s])
         end
     end
     return reduce(vcat, x_vecs), unflatten_to_Tuple
 end
 
 function zygote_flatten(x1, x2::Tangent)
-    zygote_flatten(x1, ntfromstruct(x2).backing)
+    return zygote_flatten(x1, ntfromstruct(x2).backing)
 end
 function zygote_flatten(x1, x2::NamedTuple)
-    zygote_flatten(ntfromstruct(x1), x2)
+    return zygote_flatten(ntfromstruct(x1), x2)
 end
 
 function zygote_flatten(x1::NamedTuple, x2::NamedTuple)
@@ -184,11 +192,12 @@ function zygote_flatten(x1::NamedTuple, x2::NamedTuple)
     return identity.(x_vec), unflatten_to_NamedTuple
 end
 
-function zygote_flatten(d1::AbstractDict, d2::AbstractDict, ks = collect(keys(d1)))
+function zygote_flatten(d1::AbstractDict, d2::AbstractDict, ks=collect(keys(d1)))
     _d1 = OrderedDict(k => d1[k] for k in ks)
     _d2 = OrderedDict(k => d2[k] for k in ks)
-    d_vec, unflatten =
-        zygote_flatten(identity.(collect(values(_d1))), identity.(collect(values(_d2))))
+    d_vec, unflatten = zygote_flatten(
+        identity.(collect(values(_d1))), identity.(collect(values(_d2)))
+    )
     function unflatten_to_Dict(v)
         v_vec_vec = unflatten(v)
         return OrderedDict(key => v_vec_vec[n] for (n, key) in enumerate(ks))
@@ -277,6 +286,9 @@ function zygote_flatten(x, ::ZeroTangent)
     t = flatten(x)
     return zero(t[1]), t[2]
 end
+# Disambiguate `zygote_flatten(::Tuple, ::Tuple{})` (the `::Any` method is
+# otherwise ambiguous with `zygote_flatten(::Tuple, ::Tuple)`).
+zygote_flatten(::Tuple, ::Tuple{}) = (Float64[], _ -> ())
 function zygote_flatten(::Any, ::Tuple{})
     return Float64[], _ -> ()
 end
@@ -287,17 +299,19 @@ end
 macro constructor(T, C)
     return flatten_expr(T, C)
 end
-flatten_expr(T, C) = quote
-    function DifferentiableFlatten.flatten(x::$(esc(T)))
-        v, un = flatten(ntfromstruct(x))
-        return identity.(v), Unflatten(x, y -> structfromnt($(esc(C)), un(y)))
+function flatten_expr(T, C)
+    quote
+        function DifferentiableFlatten.flatten(x::$(esc(T)))
+            v, un = flatten(ntfromstruct(x))
+            return identity.(v), Unflatten(x, y -> structfromnt($(esc(C)), un(y)))
+        end
+        function DifferentiableFlatten.zygote_flatten(x1::$(esc(T)), x2::$(esc(T)))
+            v, un = zygote_flatten(ntfromstruct(x1), ntfromstruct(x2))
+            return identity.(v), Unflatten(x2, y -> structfromnt($(esc(C)), un(y)))
+        end
+        DifferentiableFlatten._zero(x::$(esc(T))) =
+            structfromnt($(esc(C)), _zero(ntfromstruct(x)))
     end
-    function DifferentiableFlatten.zygote_flatten(x1::$(esc(T)), x2::$(esc(T)))
-        v, un = zygote_flatten(ntfromstruct(x1), ntfromstruct(x2))
-        return identity.(v), Unflatten(x2, y -> structfromnt($(esc(C)), un(y)))
-    end
-    DifferentiableFlatten._zero(x::$(esc(T))) =
-        structfromnt($(esc(C)), _zero(ntfromstruct(x)))
 end
 
 _cumsum(x) = cumsum(x)
@@ -331,31 +345,29 @@ end
         function flatten(x::JuMP.Containers.DenseAxisArray)
             x_vec, from_vec = flatten(vec(identity.(x.data)))
             Array_from_vec(x_vec) = JuMP.Containers.DenseAxisArray(
-                reshape(from_vec(x_vec), size(x)),
-                axes(x)...,
+                reshape(from_vec(x_vec), size(x)), axes(x)...
             )
             return identity.(x_vec), Array_from_vec
         end
 
         function zygote_flatten(x1::JuMP.Containers.DenseAxisArray, x2::NamedTuple)
-            x_vec, from_vec =
-                zygote_flatten(vec(identity.(x1.data)), vec(identity.(x2.data)))
+            x_vec, from_vec = zygote_flatten(
+                vec(identity.(x1.data)), vec(identity.(x2.data))
+            )
             Array_from_vec(x_vec) = JuMP.Containers.DenseAxisArray(
-                reshape(from_vec(x_vec), size(x2)),
-                axes(x2)...,
+                reshape(from_vec(x_vec), size(x2)), axes(x2)...
             )
             return identity.(x_vec), Array_from_vec
         end
 
         function zygote_flatten(
-            x1::JuMP.Containers.DenseAxisArray,
-            x2::JuMP.Containers.DenseAxisArray,
+            x1::JuMP.Containers.DenseAxisArray, x2::JuMP.Containers.DenseAxisArray
         )
-            x_vec, from_vec =
-                zygote_flatten(vec(identity.(x1.data)), vec(identity.(x2.data)))
+            x_vec, from_vec = zygote_flatten(
+                vec(identity.(x1.data)), vec(identity.(x2.data))
+            )
             Array_from_vec(x_vec) = JuMP.Containers.DenseAxisArray(
-                reshape(from_vec(x_vec), size(x2)),
-                axes(x2)...,
+                reshape(from_vec(x_vec), size(x2)), axes(x2)...
             )
             return identity.(x_vec), Array_from_vec
         end
