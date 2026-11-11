@@ -28,4 +28,4 @@ jobs:
       - uses: codecov/codecov-action@v1
         if: ${{ matrix.julia-version == '1' && matrix.os == 'ubuntu-latest' }}
         with:
-          file: lcov.info
+          files: lcov.info
