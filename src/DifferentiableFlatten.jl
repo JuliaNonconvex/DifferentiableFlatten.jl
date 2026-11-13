@@ -105,9 +105,29 @@ end
 function _build_ordered_dict(vals, keys)
     return OrderedDict(key => vals[n] for (n, key) in enumerate(keys))
 end
+# Dict cotangents arrive in several shapes depending on the AD system and
+# version: plain `Dict`s (Zygote), `NamedTuple`s, or structural `Tangent`s
+# (backing: a `NamedTuple` or a tuple of `Pair`s). Extract the value
+# cotangents in the order of `keys`: a plain Dict's iteration order is not
+# the construction order, and `values(Δ)` on a Dict returns an unordered
+# iterator that fails cotangent projection.
+function _dict_cotangent_values(Δ, keys)
+    if Δ isa AbstractDict
+        return Tuple(get(Δ, k, ChainRulesCore.ZeroTangent()) for k in keys)
+    elseif Δ isa NamedTuple
+        return Tuple(get(Δ, k, ChainRulesCore.ZeroTangent()) for k in keys)
+    elseif Δ isa ChainRulesCore.Tangent
+        b = ChainRulesCore.backing(Δ)
+        return b isa NamedTuple ?
+               Tuple(get(b, k, ChainRulesCore.ZeroTangent()) for k in keys) :
+               _dict_cotangent_values(Dict(b), keys)
+    else
+        return Tuple(values(Δ))
+    end
+end
 function ChainRulesCore.rrule(::typeof(_build_ordered_dict), vals, keys)
     return _build_ordered_dict(vals, keys), Δ -> begin
-        NoTangent(), values(Δ), NoTangent()
+        NoTangent(), _dict_cotangent_values(Δ, keys), NoTangent()
     end
 end
 
@@ -245,6 +265,20 @@ _zero(x::Tuple) = map(_zero, x)
 _zero(x) = structfromnt(typeof(x), _zero(ntfromstruct(x)))
 
 function _merge(d1::AbstractDict{K,V}, d2::AbstractDict) where {K,V}
+    _d = OrderedDict{K,V}(k => _zero(v) for (k, v) in d1)
+    return sort!(merge(_d, OrderedDict{K,V}(d2)))
+end
+# Zygote can produce structural Tangents for dict cotangents (e.g. when the
+# dict is nested inside a larger structure); mirror the dict-merge handling
+# for them instead of falling through the `_merge(::Any, d2)` catch-all.
+function _merge(d1::AbstractDict{K,V}, d2::Tangent) where {K,V}
+    return _merge(d1, ChainRulesCore.backing(d2))
+end
+function _merge(d1::AbstractDict{K,V}, d2::NamedTuple) where {K,V}
+    _d = OrderedDict{K,V}(k => _zero(v) for (k, v) in d1)
+    return sort!(merge(_d, OrderedDict{K,V}(pairs(d2))))
+end
+function _merge(d1::AbstractDict{K,V}, d2::Tuple{Vararg{Pair}}) where {K,V}
     _d = OrderedDict{K,V}(k => _zero(v) for (k, v) in d1)
     return sort!(merge(_d, OrderedDict{K,V}(d2)))
 end

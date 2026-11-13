@@ -146,6 +146,18 @@ end
         maybeflatten(u[:z] + 2u[:a] + 3u[:m])
     end[1]
     @test g == [1.0, 2.0, 3.0]
+
+    # A Zygote gradient through a function of a bare dict must be nonzero
+    # and correctly ordered: dict cotangents (plain Dicts or Tangents) used
+    # to fall through the cotangent handling, yielding zero or permuted
+    # gradients.
+    d = OrderedDict(:a => 1.0, :b => 2.0)
+    xvec, un = flatten(d, [:a, :b])
+    g = Zygote.gradient(xvec) do v
+        u = un(v)
+        2u[:a] + 6u[:b]
+    end[1]
+    @test g == [2.0, 6.0]
 end
 
 @testset "Aqua" begin
