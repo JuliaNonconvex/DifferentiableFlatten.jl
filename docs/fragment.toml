@@ -1,0 +1,10 @@
+name = "DifferentiableFlatten"
+modules = ["DifferentiableFlatten"]
+
+[[pages]]
+title = "Introduction"
+file = "index.md"
+
+[[pages]]
+title = "Docstrings"
+file = "docstrings.md"
