@@ -251,6 +251,14 @@ function ChainRulesCore.rrule(::typeof(flatten), d::AbstractDict, ks)
     end
 end
 
+"""
+    Unflatten(x, unflatten)
+
+Callable returned by [`flatten`](@ref) that maps a flattened vector back to
+an object of the same type (and, for the second element of `flatten(x)`,
+value) as the original `x`. It is a subtype of `Function` and participates in
+differentiation through its ChainRules rrule.
+"""
 struct Unflatten{X,F} <: Function
     x::X
     unflatten::F
@@ -327,6 +335,16 @@ function zygote_flatten(::Any, ::Tuple{})
     return Float64[], _ -> ()
 end
 
+"""
+    @constructor(T)
+    @constructor(T, C)
+
+Generates efficient [`flatten`](@ref) and `zygote_flatten` methods for the
+type `T`, reconstructing objects of type `C`. Useful for custom structs
+whose reconstruction should use a different type (for example a parametric
+type with fixed type parameters), or whose construction requires a custom
+constructor call. See the [usage guide](index.md) for examples.
+"""
 macro constructor(T)
     return flatten_expr(T, T)
 end
