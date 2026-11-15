@@ -148,15 +148,6 @@ end
 
 zygote_flatten(::Vector{<:Real}, x::Vector{<:Real}) = (identity.(x), identity)
 
-# x_vecs_and_backs = map(val -> flatten(val), identity.(x))
-# x_vecs, backs = first.(x_vecs_and_backs), last.(x_vecs_and_backs)
-# function Vector_from_vec(x_vec)
-#     sz = _cumsum(map(_length, x_vecs))
-#     x_Vec = [backs[n](x_vec[sz[n] - _length(x_vecs[n]) + 1:sz[n]]) for n in eachindex(x)]
-#     return x_Vec
-# end
-# return reduce(vcat, x_vecs), Vector_from_vec
-
 function zygote_flatten(x1::AbstractVector, x2::AbstractVector)
     x_vecs_and_backs = map(tuple.(identity.(x1), identity.(x2))) do val
         return zygote_flatten(val[1], val[2])
