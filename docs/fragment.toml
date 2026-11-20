@@ -1,9 +1,18 @@
 name = "DifferentiableFlatten"
 modules = ["DifferentiableFlatten"]
+doctest_setup = "using DifferentiableFlatten"
 
 [[pages]]
 title = "Introduction"
 file = "index.md"
+
+[[pages]]
+title = "Usage"
+file = "usage.md"
+
+[[pages]]
+title = "Differentiation"
+file = "differentiation.md"
 
 [[pages]]
 title = "Docstrings"
