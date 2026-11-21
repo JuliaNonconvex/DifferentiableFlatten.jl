@@ -1,4 +1,4 @@
-# DifferentiableFlatten.jl
+# DifferentiableFlatten
 
 A [`flatten`](@ref DifferentiableFlatten.flatten) function which flattens
 arbitrary nested data structures
