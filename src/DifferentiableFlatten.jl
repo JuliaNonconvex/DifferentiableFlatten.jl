@@ -118,15 +118,18 @@ function _dict_cotangent_values(Δ, keys)
         return Tuple(get(Δ, k, ChainRulesCore.ZeroTangent()) for k in keys)
     elseif Δ isa ChainRulesCore.Tangent
         b = ChainRulesCore.backing(Δ)
-        return b isa NamedTuple ?
-               Tuple(get(b, k, ChainRulesCore.ZeroTangent()) for k in keys) :
-               _dict_cotangent_values(Dict(b), keys)
+        return if b isa NamedTuple
+            Tuple(get(b, k, ChainRulesCore.ZeroTangent()) for k in keys)
+        else
+            _dict_cotangent_values(Dict(b), keys)
+        end
     else
         return Tuple(values(Δ))
     end
 end
 function ChainRulesCore.rrule(::typeof(_build_ordered_dict), vals, keys)
-    return _build_ordered_dict(vals, keys), Δ -> begin
+    return _build_ordered_dict(vals, keys),
+    Δ -> begin
         NoTangent(), _dict_cotangent_values(Δ, keys), NoTangent()
     end
 end
