@@ -118,15 +118,18 @@ function _dict_cotangent_values(Δ, keys)
         return Tuple(get(Δ, k, ChainRulesCore.ZeroTangent()) for k in keys)
     elseif Δ isa ChainRulesCore.Tangent
         b = ChainRulesCore.backing(Δ)
-        return b isa NamedTuple ?
-               Tuple(get(b, k, ChainRulesCore.ZeroTangent()) for k in keys) :
-               _dict_cotangent_values(Dict(b), keys)
+        return if b isa NamedTuple
+            Tuple(get(b, k, ChainRulesCore.ZeroTangent()) for k in keys)
+        else
+            _dict_cotangent_values(Dict(b), keys)
+        end
     else
         return Tuple(values(Δ))
     end
 end
 function ChainRulesCore.rrule(::typeof(_build_ordered_dict), vals, keys)
-    return _build_ordered_dict(vals, keys), Δ -> begin
+    return _build_ordered_dict(vals, keys),
+    Δ -> begin
         NoTangent(), _dict_cotangent_values(Δ, keys), NoTangent()
     end
 end
@@ -352,8 +355,9 @@ function flatten_expr(T, C)
             v, un = zygote_flatten(ntfromstruct(x1), ntfromstruct(x2))
             return identity.(v), Unflatten(x2, y -> structfromnt($(esc(C)), un(y)))
         end
-        DifferentiableFlatten._zero(x::$(esc(T))) =
-            structfromnt($(esc(C)), _zero(ntfromstruct(x)))
+        DifferentiableFlatten._zero(x::$(esc(T))) = structfromnt(
+            $(esc(C)), _zero(ntfromstruct(x))
+        )
     end
 end
 
@@ -377,8 +381,9 @@ zygote_flatten(x1::SparseVector, x2::SparseVector) = zygote_flatten(Array(x1), A
 
 function zygote_flatten(x1::SparseMatrixCSC, x2::SparseMatrixCSC)
     x_vec, from_vec = zygote_flatten(x1.nzval, x2.nzval)
-    Array_from_vec(x_vec) =
-        SparseMatrixCSC(x1.m, x1.n, x1.colptr, x1.rowval, from_vec(x_vec))
+    Array_from_vec(x_vec) = SparseMatrixCSC(
+        x1.m, x1.n, x1.colptr, x1.rowval, from_vec(x_vec)
+    )
     return identity.(x_vec), Unflatten(x1, Array_from_vec)
 end
 
