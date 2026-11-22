@@ -1,5 +1,7 @@
 # DifferentiableFlatten
 
+![JuliaNonconvex logo](https://raw.githubusercontent.com/JuliaNonconvex/DifferentiableFlatten.jl/main/docs/src/assets/logo.png)
+
 A [`flatten`](@ref DifferentiableFlatten.flatten) function which flattens
 arbitrary nested data structures
 (arrays, tuples, named tuples, dictionaries, structs, and combinations
@@ -13,8 +15,6 @@ This was originally part of NonconvexCore.jl.
 
 The package is unexported on purpose: all names are accessed qualified, e.g.
 `DifferentiableFlatten.flatten`.
-
-![JuliaNonconvex logo](https://raw.githubusercontent.com/JuliaNonconvex/DifferentiableFlatten.jl/main/docs/src/assets/logo.png)
 
 
 See [Usage](usage.md) for the flattening API and
